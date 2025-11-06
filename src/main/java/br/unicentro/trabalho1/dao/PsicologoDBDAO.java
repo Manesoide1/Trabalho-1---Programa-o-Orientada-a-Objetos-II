@@ -53,16 +53,6 @@ public class PsicologoDBDAO implements PsicologoDAO, IConst {
         }
     }
 
-    /*// Remover psicologo
-    public void remove(Psicologo psicologo) throws SQLException {
-        String sql = "DELETE FROM psicologo WHERE psicologo_id = ?";
-        try (Connection con = Conexao.getConexao(Conexao.stringDeConexao, Conexao.usuario, Conexao.senha);
-             PreparedStatement stmt = con.prepareStatement(sql)) {
-            stmt.setInt(1, psicologo.getPsicologoID());
-            stmt.executeUpdate();
-        }
-    }*/
-
     public void remove(Psicologo psicologo) throws SQLException {
         String checkSql = "SELECT 1 FROM psicologo WHERE psicologo_id = ?";
         String deleteSql = "DELETE FROM psicologo WHERE psicologo_id = ?";

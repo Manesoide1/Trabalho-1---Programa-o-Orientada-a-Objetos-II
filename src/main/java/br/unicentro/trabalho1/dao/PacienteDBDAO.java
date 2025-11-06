@@ -82,6 +82,7 @@ public class PacienteDBDAO implements PacienteDAO, IConst {
                     Paciente paciente = new Paciente();
                     paciente.setPacienteID(rs.getInt("paciente_id"));
                     paciente.setNome(rs.getString("nome"));
+                    paciente.setCpf(rs.getString("cpf"));
                     return paciente;
                 } else {
                     // Não encontrou o psicólogo

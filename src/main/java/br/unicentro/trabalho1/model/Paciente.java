@@ -1,5 +1,7 @@
 package br.unicentro.trabalho1.model;
 
+import java.util.Objects;
+
 public class Paciente {
     private int pacienteID;
     private String nome;
@@ -47,10 +49,8 @@ public class Paciente {
         this.psicologo_ID = psicologo_ID;
     }
 
-
-
     @Override
     public String toString() {
-        return "paciente{" + "codigo=" + pacienteID + ", nome=" + nome + ", cpf=" + cpf + ", psicologo_ID=" + psicologo_ID + '}';
+        return "Paciente{" + "codigo=" + pacienteID + ", nome=" + nome + ", cpf=" + cpf + ", psicologo_ID=" + psicologo_ID + '}';
     }
 }
