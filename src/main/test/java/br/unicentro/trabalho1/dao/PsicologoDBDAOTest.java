@@ -47,7 +47,7 @@ class PsicologoDBDAOTest {
         Psicologo p = new Psicologo(0, "Teste", 0, 0);
         dao.insere(p);
         dao.remove(p);
-        assertThrows(SQLDataException.class, () -> dao.buscaPorCodigo(0));
+        assertThrows(SQLDataException.class, () -> dao.buscaPorCodigo(0), "Psicologo não foi removido.");
     }
 
     @Test
@@ -69,7 +69,7 @@ class PsicologoDBDAOTest {
         Psicologo p = new Psicologo(0, "Teste", 0, 0);
         dao.insere(p);
         List<Psicologo> lista = dao.listaTodos();
-        assertFalse(lista.isEmpty());
+        assertFalse(lista.isEmpty(), "Lista voltou vazia.");
         dao.remove(p);
     }
 }

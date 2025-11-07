@@ -3,6 +3,7 @@ package br.unicentro.trabalho1.dao;
 import br.unicentro.trabalho1.model.Paciente;
 import br.unicentro.trabalho1.model.Psicologo;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.sql.SQLDataException;
@@ -64,7 +65,7 @@ class PacienteDBDAOTest {
         Paciente p = new Paciente(0, "Teste", "00000000000", 0);
         dao.insere(p);
         dao.remove(p);
-        assertThrows(SQLDataException.class, () -> dao.buscaPorCodigo(0));
+        assertThrows(SQLDataException.class, () -> dao.buscaPorCodigo(0), "Paciente não foi removido.");
     }
 
     @Test
@@ -86,7 +87,7 @@ class PacienteDBDAOTest {
         Paciente p = new Paciente(0, "Teste", "00000000000", 0);
         dao.insere(p);
         List<Paciente> lista = dao.listaTodos();
-        assertFalse(lista.isEmpty());
+        assertFalse(lista.isEmpty(), "Lista voltou vazia.");
         dao.remove(p);
     }
 }
