@@ -6,24 +6,45 @@ import java.util.List;
 
 import br.unicentro.trabalho1.model.Psicologo;
 
-public class PsicologoDBDAO implements PsicologoDAO, IConst {
+public class PsicologoDBDAO implements PsicologoDAO {
+
+    // REFATORAÇÃO
+    // Nomenclatura centralizada das colunas
+    // Essas constantes ajudam a evitar erros de digitação, facilitam refatorações e
+    // tornam claro quais nomes de coluna realmente existem na tabela.
+    // Se algum nome de coluna mudar no banco, basta ajustar aqui.
+    private static final String COL_ID = "psicologo_id";
+    private static final String COL_NOME = "nome";
+    private static final String COL_TEMPO = "tempo_atuacao";
+    private static final String COL_SALARIO = "salario";
 
     // Inserir psicologo (ID gerado automaticamente pelo banco)
     public void insere(Psicologo psicologo) throws SQLException {
-        String sql = "INSERT INTO psicologo (psicologo_id, nome, tempo_atuacao, salario) VALUES (?, ?, ?, ?) ON CONFLICT (psicologo_id) DO NOTHING RETURNING psicologo_id";
-        try (Connection con = Conexao.getConexao(Conexao.stringDeConexao, Conexao.usuario, Conexao.senha);
+        // A instrução SQL utiliza as constantes declaradas acima, garantindo consistência.
+        // O "ON CONFLICT DO NOTHING" evita que seja inserido um psicólogo com ID já existente.
+        // O "RETURNING" devolve o ID gerado ou confirmado.
+        String sql = "INSERT INTO psicologo (" + COL_ID + ", " + COL_NOME + ", " + COL_TEMPO + ", " + COL_SALARIO +
+                ") VALUES (?, ?, ?, ?) ON CONFLICT (" + COL_ID + ") DO NOTHING RETURNING " + COL_ID;
+
+        // Uso de try-with-resources garante fechamento automático da conexão e do statement.
+        try (Connection con = Conexao.getConexao();
              PreparedStatement stmt = con.prepareStatement(sql)) {
+
+            // Preenchimento dos parâmetros da instrução SQL
             stmt.setInt(1, psicologo.getPsicologoID());
             stmt.setString(2, psicologo.getNome());
             stmt.setInt(3, psicologo.getTempoAtuacao());
             stmt.setDouble(4, psicologo.getSalario());
 
+            // Execução e captura do resultado.
+            // Como há RETURNING, utilizamos executeQuery().
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    // Inseriu com sucesso
-                    psicologo.setPsicologoID(rs.getInt("psicologo_id"));
+                    // Atualiza o ID no objeto caso o banco o retorne
+                    psicologo.setPsicologoID(rs.getInt(COL_ID));
                 } else {
-                    // O ID já existe
+                    // Caso o insert não aconteça (por conflito),
+                    // lançamos uma exceção indicando o motivo.
                     throw new SQLDataException("Psicólogo com ID " + psicologo.getPsicologoID() + " já existe.");
                 }
             }
@@ -32,43 +53,53 @@ public class PsicologoDBDAO implements PsicologoDAO, IConst {
 
     // Atualizar psicologo
     public void atualiza(Psicologo psicologo) throws SQLException {
-        String sql = "UPDATE psicologo SET nome = ?, tempo_atuacao = ?, salario = ? WHERE psicologo_id = ?";
+        // Atualiza apenas as colunas nome, tempo e salário com base no ID
+        String sql = "UPDATE psicologo SET " +
+                COL_NOME + " = ?, " +
+                COL_TEMPO + " = ?, " +
+                COL_SALARIO + " = ? WHERE " +
+                COL_ID + " = ?";
 
-        try (Connection con = Conexao.getConexao(Conexao.stringDeConexao, Conexao.usuario, Conexao.senha);
+        try (Connection con = Conexao.getConexao();
              PreparedStatement stmt = con.prepareStatement(sql)) {
 
-            // Configura os parâmetros
+            // Preenchendo os parâmetros do UPDATE
             stmt.setString(1, psicologo.getNome());
             stmt.setInt(2, psicologo.getTempoAtuacao());
             stmt.setDouble(3, psicologo.getSalario());
             stmt.setInt(4, psicologo.getPsicologoID());
 
-            // Executa o UPDATE
+            // executeUpdate retorna o número de linhas alteradas
             int linhasAfetadas = stmt.executeUpdate();
-
-            // Se não afetou nenhuma linha, o ID não existe
             if (linhasAfetadas == 0) {
+                // Se nenhuma linha for afetada, significa que o ID não existe
                 throw new SQLDataException("Psicólogo com ID " + psicologo.getPsicologoID() + " não encontrado.");
             }
         }
     }
 
+    // Remover psicologo
     public void remove(Psicologo psicologo) throws SQLException {
-        String checkSql = "SELECT 1 FROM psicologo WHERE psicologo_id = ?";
-        String deleteSql = "DELETE FROM psicologo WHERE psicologo_id = ?";
+        // Primeiro SELECT para verificar se o registro existe antes de tentar remover.
+        // Isso permite dar uma mensagem de erro mais clara.
+        String checkSql = "SELECT 1 FROM psicologo WHERE " + COL_ID + " = ?";
+        // Comando definitivo de remoção
+        String deleteSql = "DELETE FROM psicologo WHERE " + COL_ID + " = ?";
 
-        try (Connection con = Conexao.getConexao(Conexao.stringDeConexao, Conexao.usuario, Conexao.senha);
+        try (Connection con = Conexao.getConexao();
              PreparedStatement checkStmt = con.prepareStatement(checkSql)) {
 
+            // Verificação da existência do psicólogo
             checkStmt.setInt(1, psicologo.getPsicologoID());
+
             try (ResultSet rs = checkStmt.executeQuery()) {
                 if (!rs.next()) {
-                    // Não encontrou o psicólogo
+                    // Caso o SELECT não retorne nada, o ID não existe
                     throw new SQLDataException("Psicólogo com ID " + psicologo.getPsicologoID() + " não encontrado.");
                 }
             }
 
-            // Psicólogo existe, pode deletar
+            // Caso exista, então executamos o DELETE
             try (PreparedStatement deleteStmt = con.prepareStatement(deleteSql)) {
                 deleteStmt.setInt(1, psicologo.getPsicologoID());
                 deleteStmt.executeUpdate();
@@ -76,44 +107,57 @@ public class PsicologoDBDAO implements PsicologoDAO, IConst {
         }
     }
 
+    // REFATORAÇÃO
+    // Método para preencher objeto Psicologo
+    // Este método encapsula toda a lógica de leitura dos campos do ResultSet e montagem
+    // do objeto correspondente, evitando repetição de código em diversos pontos.
+    private Psicologo preencheDadosPsicologo(ResultSet rs) throws SQLException {
+        Psicologo psicologo = new Psicologo();
+        psicologo.setPsicologoID(rs.getInt(COL_ID));
+        psicologo.setNome(rs.getString(COL_NOME));
+        psicologo.setTempoAtuacao(rs.getInt(COL_TEMPO));
+        psicologo.setSalario(rs.getDouble(COL_SALARIO));
+        return psicologo;
+    }
 
-    // Buscar psicologo por c�digo
+    // Buscar psicologo por código
     public Psicologo buscaPorCodigo(int codigo) throws SQLException {
-        String sql = "SELECT * FROM psicologo WHERE psicologo_id = ?";
-        try (Connection con = Conexao.getConexao(Conexao.stringDeConexao, Conexao.usuario, Conexao.senha);
+        String sql = "SELECT * FROM psicologo WHERE " + COL_ID + " = ?";
+
+        try (Connection con = Conexao.getConexao();
              PreparedStatement stmt = con.prepareStatement(sql)) {
+
             stmt.setInt(1, codigo);
+
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Psicologo psicologo = new Psicologo();
-                    psicologo.setPsicologoID(rs.getInt("psicologo_id"));
-                    psicologo.setNome(rs.getString("nome"));
-                    return psicologo;
+                    // Uso do método que preenche o objeto a partir do ResultSet
+                    return preencheDadosPsicologo(rs);
                 } else {
-                        // Não encontrou o psicólogo
-                        throw new SQLDataException("Psicólogo com ID " + codigo + " não encontrado.");
+                    // Caso não exista registro com esse ID
+                    throw new SQLDataException("Psicólogo com ID " + codigo + " não encontrado.");
                 }
             }
         }
     }
 
-    // Listar todas as psicologos
+    // Listar todos
     public List<Psicologo> listaTodos() throws SQLException {
         String sql = "SELECT * FROM psicologo";
+
+        // Lista onde todos os psicólogos encontrados serão armazenados
         List<Psicologo> psicologos = new ArrayList<>();
 
-        try (Connection con = Conexao.getConexao(Conexao.stringDeConexao, Conexao.usuario, Conexao.senha);
+        try (Connection con = Conexao.getConexao();
              PreparedStatement stmt = con.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
+
+            // Percorre todos os registros retornados pela consulta
             while (rs.next()) {
-                Psicologo psicologo = new Psicologo();
-                psicologo.setPsicologoID(rs.getInt("psicologo_id"));
-                psicologo.setNome(rs.getString("nome"));
-                psicologo.setTempoAtuacao(rs.getInt("tempo_atuacao"));
-                psicologo.setSalario(rs.getDouble("salario"));
-                psicologos.add(psicologo);
+                psicologos.add(preencheDadosPsicologo(rs));
             }
         }
+
         return psicologos;
     }
 }
